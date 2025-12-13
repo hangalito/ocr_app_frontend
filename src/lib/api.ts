@@ -72,4 +72,25 @@ async function getProfile(): Promise<UserProfile> {
   return { id: "local-1", name: "Acme Corp", email: "hello@acme.test" };
 }
 
-export { getBaseUrl, uploadFile, uploadFiles, getHistory, saveToHistory, getProfile };
+import { ExtractResult } from "../types";
+
+async function extractTextFromInvoice(file: File, language: string = "por"): Promise<ExtractResult> {
+  const url = `${getBaseUrl()}/extract`;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("langs", language);
+
+  const response = await fetch(url, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OCR extraction failed: ${response.status} ${errorText}`);
+  }
+
+  return response.json();
+}
+
+export { getBaseUrl, uploadFile, uploadFiles, getHistory, saveToHistory, getProfile, extractTextFromInvoice };
