@@ -182,6 +182,11 @@ Obrigado pela preferência!`)
         setSelectedTemplate("")
     }, [])
 
+    const handleExport = useCallback((format: 'json' | 'csv' | 'pdf') => {
+        // Logic to handle export based on the selected format
+        console.log(`Exporting as ${format}`);
+    }, []);
+
     return (
         <div className="space-y-6">
             <div>
@@ -459,6 +464,27 @@ Obrigado pela preferência!`)
                                 </div>
                             </div>
                         )}
+                    </CardContent>
+                </Card>
+            )}
+
+            {status === "complete" && (
+                <Card>
+                    <CardContent className="py-4">
+                        <div className="space-y-4">
+                            <h2 className="text-lg font-semibold">Opções de Exportação</h2>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleExport('json')}>
+                                    Exportar como JSON
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
+                                    Exportar como CSV
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
+                                    Exportar como PDF
+                                </Button>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             )}
