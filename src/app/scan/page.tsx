@@ -1,5 +1,5 @@
 import {AppLayout} from "@/components/app-layout"
-import {ScanContent} from "@/components/scan-content";
+import {ScanContent} from "@/components/scan-content"
 
 export default function ScanPage() {
     return (

@@ -1,12 +1,19 @@
 "use client"
 
-import { FileText, ImageIcon, Clock, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { FileText, ImageIcon, Clock, TrendingUp, ArrowUpRight, ArrowDownRight, FilePlus2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
 
 const stats = [
+  {
+    title: "Modelos Criados",
+    value: "12",
+    change: "+3",
+    trend: "up",
+    icon: FilePlus2,
+  },
   {
     title: "Total de Digitalizações",
     value: "1,284",

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Upload, History, User, ScanText, LogOut, Settings } from "lucide-react"
+import { LayoutDashboard, Upload, History, User, ScanText, LogOut, Settings, FilePlus2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,6 +15,7 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Criar Modelo", href: "/templates", icon: FilePlus2 },
   { name: "Digitalizar", href: "/scan", icon: Upload },
   { name: "Histórico", href: "/history", icon: History },
   { name: "Perfil", href: "/profile", icon: User },
