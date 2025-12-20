@@ -101,8 +101,8 @@ export function TemplatesContent() {
 
         if (!imageRef.current) return
 
-        const imgWidth = imageRef.current.naturalWidth
-        const imgHeight = imageRef.current.naturalHeight
+        // const imgWidth = imageRef.current.naturalWidth
+        // const imgHeight = imageRef.current.naturalHeight
 
         const field: Field = {
             name: fieldName,
@@ -121,7 +121,7 @@ export function TemplatesContent() {
         setFields(fields.filter((_, i) => i !== index))
     }
 
-    const saveModel = () => {
+    const saveModel = async () => {
         if (!modelName.trim()) {
             alert("Por favor, insira um nome para o modelo")
             return
@@ -139,6 +139,24 @@ export function TemplatesContent() {
             fields,
             image: currentImage,
             createdAt: new Date().toISOString(),
+        }
+
+        try {
+            const response = await fetch(
+                'http://localhost:8080/api/templates', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(model)
+                }
+            )
+
+            console.log('=====================================')
+            console.log(`Response: ${JSON.stringify(response)}`)
+            console.log('=====================================')
+        } catch (e) {
+            console.error('ERROR: Could not publish the model', e)
         }
 
         const savedModels = JSON.parse(localStorage.getItem("ocrModels") || "[]")
