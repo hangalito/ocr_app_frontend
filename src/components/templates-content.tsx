@@ -1,3 +1,5 @@
+/* _.. ___ .._ _ ... ._...___ .__.__ */
+
 "use client"
 
 import type React from "react"
@@ -10,14 +12,9 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {FileText, Info, Plus, RotateCcw, Save, Trash2, Upload, ZoomIn, ZoomOut} from "lucide-react"
 import {Badge} from "@/components/ui/badge"
 import {Alert, AlertDescription} from "@/components/ui/alert"
-
-interface Field {
-    name: string
-    x: number
-    y: number
-    width: number
-    height: number
-}
+import {createTemplate} from "@/lib/api"
+import {Template, TemplateField} from "@/types";
+import {AxiosError} from "axios";
 
 interface Selection {
     x: number
@@ -31,7 +28,7 @@ export function TemplatesContent() {
     const [fieldName, setFieldName] = useState("")
     const [language, setLanguage] = useState("por")
     const [currentImage, setCurrentImage] = useState<string | null>(null)
-    const [fields, setFields] = useState<Field[]>([])
+    const [fields, setFields] = useState<TemplateField[]>([])
     const [isSelecting, setIsSelecting] = useState(false)
     const [currentSelection, setCurrentSelection] = useState<Selection | null>(null)
     const [zoom, setZoom] = useState(1)
@@ -101,11 +98,10 @@ export function TemplatesContent() {
 
         if (!imageRef.current) return
 
-        // const imgWidth = imageRef.current.naturalWidth
-        // const imgHeight = imageRef.current.naturalHeight
-
-        const field: Field = {
+        const field: TemplateField = {
+            id: "",
             name: fieldName,
+            type: "TEXT",
             x: currentSelection.x / imageRef.current.width,
             y: currentSelection.y / imageRef.current.height,
             width: currentSelection.width / imageRef.current.width,
@@ -132,46 +128,30 @@ export function TemplatesContent() {
             return
         }
 
-        const model = {
-            id: Date.now(),
+        const model: Template = {
+            id: "",
             name: modelName,
-            language,
-            fields,
-            image: currentImage,
-            createdAt: new Date().toISOString(),
-        }
+            fields: fields,
+            image_url: currentImage === null ? "" : currentImage,
+            createdAt: "", updatedAt: "",
+        };
 
         try {
-            const response = await fetch(
-                'http://localhost:8080/api/templates', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(model)
-                }
-            )
+            console.log(`Saving model: ${JSON.stringify(model)}`)
+            await createTemplate(model);
+            alert("Modelo guardado com sucesso!");
 
-            console.log('=====================================')
-            console.log(`Response: ${JSON.stringify(response)}`)
-            console.log('=====================================')
-        } catch (e) {
-            console.error('ERROR: Could not publish the model', e)
+            setModelName("")
+            setFieldName("")
+            setFields([])
+            setCurrentImage(null)
+            setCurrentSelection(null)
+            setZoom(1)
+        } catch (error) {
+            console.error("Failed to save template", error);
+            alert("Erro ao guardar o modelo.");
+            console.error((error as AxiosError)?.response?.data)
         }
-
-        const savedModels = JSON.parse(localStorage.getItem("ocrModels") || "[]")
-        savedModels.push(model)
-        localStorage.setItem("ocrModels", JSON.stringify(savedModels))
-
-        alert("Modelo guardado com sucesso!")
-
-        // Reset
-        setModelName("")
-        setFieldName("")
-        setFields([])
-        setCurrentImage(null)
-        setCurrentSelection(null)
-        setZoom(1)
     }
 
     const zoomIn = () => setZoom(Math.min(zoom + 0.25, 3))
@@ -321,7 +301,7 @@ export function TemplatesContent() {
                         <CardContent>
                             {!currentImage ? (
                                 <div
-                                    className="min-h-[500px] border-2 border-dashed border-muted rounded-lg flex items-center justify-center bg-muted/30">
+                                    className="min-h-125 border-2 border-dashed border-muted rounded-lg flex items-center justify-center bg-muted/30">
                                     <div className="text-center p-8">
                                         <Upload className="h-16 w-16 text-muted-foreground mx-auto mb-4"/>
                                         <p className="text-lg font-semibold text-foreground">Carregue uma imagem exemplo
@@ -331,7 +311,7 @@ export function TemplatesContent() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="overflow-auto max-h-[600px] border rounded-lg bg-muted/30">
+                                <div className="overflow-auto max-h-150 border rounded-lg bg-muted/30">
                                     <div
                                         ref={containerRef}
                                         className="relative inline-block"
