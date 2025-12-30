@@ -9,6 +9,12 @@ function getBaseUrl() {
     return DEFAULT_BASE.replace(/\/$/, "");
 }
 
+/**
+ * Upload file to backend
+ *
+ * @param file File to be uploaded
+ * @param languages Comma-separated value of the document languages
+ */
 async function uploadFile(file: File, languages = "por"): Promise<FileRecord> {
     const url = `${getBaseUrl()}/extract`;
     const fd = new FormData();
@@ -35,7 +41,7 @@ async function uploadFiles(files: File[], languages = "por") {
 }
 
 async function getHistory(): Promise<FileRecord[]> {
-    // The backend doesn't provide persistence yet. We'll use localStorage-backed history in the frontend.
+    // TODO: No persistence endpoint provided by the backend yet. Using `localStorage`-backed history
     const raw = typeof window !== "undefined" ? localStorage.getItem("ocr_history") : null;
     if (!raw) return [];
     try {
@@ -64,13 +70,33 @@ async function getProfile(): Promise<UserProfile> {
     return {id: "local-1", name: "Acme Corp", email: "hello@acme.test"};
 }
 
-async function extractTextFromInvoice(file: File, language: string = "por"): Promise<ExtractResult> {
-    const url = `${getBaseUrl()}/extract`;
+async function extractTextFromDocument(
+    file: File,
+    lang: string = "por"
+): Promise<ExtractResult> {
+    const url = `${getBaseUrl()}/scan/raw`;
     const formData = new FormData();
-    formData.append("file", file);
-    formData.append("langs", language);
 
-    const { data } = await axios.post(url, formData);
+    formData.append("file", file);
+    formData.append("lang", lang);
+
+    const {data} = await axios.post(url, formData);
+    return data;
+}
+
+async function extractTextFromInvoice(
+    file: File,
+    template: string,
+    lang: string = "por",
+): Promise<ExtractResult> {
+    const url = `${getBaseUrl()}/scan`;
+    const formData = new FormData();
+
+    formData.append("file", file);
+    formData.append("lang", lang);
+    formData.append("template", template)
+
+    const {data} = await axios.post(url, formData);
     return data;
 }
 
@@ -100,6 +126,7 @@ export {
     getHistory,
     saveToHistory,
     getProfile,
+    extractTextFromDocument,
     extractTextFromInvoice,
     createTemplate,
     getTemplates,

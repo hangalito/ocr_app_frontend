@@ -19,8 +19,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {getTemplates} from "@/lib/api"
-import {Template} from "@/types";
+import {extractTextFromDocument, extractTextFromInvoice, getTemplates} from "@/lib/api"
+import {ExtractResult, OCRPage, Template} from "@/types";
 
 type ScanStatus = "idle" | "uploading" | "processing" | "complete" | "error"
 
@@ -28,6 +28,11 @@ interface UploadedFile {
     name: string
     size: number
     preview: string
+}
+
+interface Language {
+    id: string;
+    label: string;
 }
 
 export function ScanContent() {
@@ -40,6 +45,12 @@ export function ScanContent() {
     const [selectedTemplate, setSelectedTemplate] = useState<string>("")
     const [extractionMode, setExtractionMode] = useState<"simple" | "template">("simple")
     const [extractedData, setExtractedData] = useState<Record<string, string>>({})
+    const [selectedLanguage, setSelectedLanguage] = useState<string>()
+
+    const languages: Array<Language> = [
+        {id: 'por', label: 'Português'},
+        {id: 'eng', label: 'English'},
+    ]
 
     useEffect(() => {
         async function fetchTemplates() {
@@ -48,11 +59,18 @@ export function ScanContent() {
                 setTemplates(templates);
             } catch (error) {
                 console.error("Failed to fetch templates", error);
+                window.alert("Erro ao carregar os seus modelos");
             }
         }
 
         fetchTemplates();
     }, [])
+
+    const disableImageSelect = useCallback(() => {
+        if (extractionMode === "template")
+            return !selectedLanguage && !selectedTemplate;
+        return !selectedLanguage;
+    }, []);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault()
@@ -69,7 +87,7 @@ export function ScanContent() {
             setStatus("uploading")
 
             const reader = new FileReader()
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 setUploadedFile({
                     name: file.name,
                     size: file.size,
@@ -78,53 +96,35 @@ export function ScanContent() {
 
                 setStatus("processing")
 
-                if (extractionMode === "template" && selectedTemplate) {
-                    const template = templates.find((t) => t.id.toString() === selectedTemplate)
-                    if (template) {
-                        setTimeout(() => {
+                try {
+                    // fixme: display each field result independently
+                    if (extractionMode === "template" && selectedTemplate) {
+                        const template = templates.find((t) => t.id.toString() === selectedTemplate)
+                        if (template) {
+                            const result: ExtractResult = await extractTextFromInvoice(file, template.id)
                             const data: Record<string, string> = {}
-                            template.fields.forEach((field) => {
-                                data[field.name] = `Valor extraído para ${field.name}`
+                            result.pages.forEach(page => {
+                                data[page.page_number] = page.text;
                             })
                             setExtractedData(data)
                             setStatus("complete")
-                        }, 2500)
-                        return
+                            return
+                        }
                     }
+
+                    // Simple Text Scan — Get the text from all the file
+                    const lang: string = selectedLanguage || "por";
+                    const result: ExtractResult = await extractTextFromDocument(file, lang);
+                    const extractedText: string = result.pages
+                        .map((page: OCRPage) => page.text)
+                        .join("\n\n");
+                    setExtractedText(extractedText);
+                    setStatus("complete");
+                } catch (e: any) {
+                    console.error("Failed to extract the text:", e);
+                    setStatus("error");
+                    window.alert(JSON.stringify(e?.response?.data?.detail[0] || "Erro ao extrair o texto"));
                 }
-
-                setTimeout(() => {
-                    setExtractedText(`FATURA Nº 2024/001234
-
-Data: 09 de Dezembro de 2024
-
-CLIENTE:
-Empresa Exemplo, Lda.
-Rua das Flores, 123
-4000-001 Porto
-NIF: 501234567
-
-DESCRIÇÃO DOS SERVIÇOS:
-1. Consultoria de Software - 40 horas
-   Valor unitário: €75,00
-   Subtotal: €3.000,00
-
-2. Desenvolvimento de Aplicação Web
-   Subtotal: €5.500,00
-
-3. Manutenção Mensal
-   Subtotal: €450,00
-
-SUBTOTAL: €8.950,00
-IVA (23%): €2.058,50
-TOTAL: €11.008,50
-
-Condições de Pagamento: 30 dias
-IBAN: PT50 0000 0000 0000 0000 0000 0
-
-Obrigado pela preferência!`)
-                    setStatus("complete")
-                }, 2000)
             }
             reader.readAsDataURL(file)
         },
@@ -198,7 +198,7 @@ Obrigado pela preferência!`)
 
         const htmlContent = `
       <!DOCTYPE html>
-      <html>
+      <html lang="pt">
         <head>
           <meta charset="utf-8">
           <title>OCR - ${uploadedFile?.name || "Resultado"}</title>
@@ -283,34 +283,55 @@ Obrigado pela preferência!`)
                                     formulários.
                                 </AlertDescription>
                             </Alert>
-                            {templates.length === 0 ? (
-                                <Alert>
-                                    <AlertDescription>
-                                        Não tem modelos criados.{" "}
-                                        <Link href="/templates" className="font-medium underline">
-                                            Criar o primeiro modelo
-                                        </Link>
-                                    </AlertDescription>
-                                </Alert>
-                            ) : (
-                                <div>
-                                    <Label htmlFor="template-select">Selecione um Modelo</Label>
-                                    <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                                        <SelectTrigger id="template-select" className="mt-2">
-                                            <SelectValue placeholder="Escolha um modelo..."/>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {templates.map((template) => (
-                                                <SelectItem key={template.id} value={template.id.toString()}>
-                                                    {template.name} ({template.fields.length} campos)
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
                         </TabsContent>
                     </Tabs>
+                    <div className="mt-2 grid grid-cols-2">
+                        <div>
+                            <Label htmlFor="language-select">Selecione um Idioma</Label>
+                            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                                <SelectTrigger id="language-select" className="mt-2">
+                                    <SelectValue placeholder="Escolha um idioma..."/>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {languages.map((language) => (
+                                        <SelectItem key={language.id} value={language.id}>
+                                            {language.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {extractionMode === "template" && (
+                            <>
+                                {templates.length === 0 ? (
+                                    <Alert>
+                                        <AlertDescription>
+                                            Não tem modelos criados.{" "}
+                                            <Link href="/templates" className="font-medium underline">
+                                                Criar o primeiro modelo
+                                            </Link>
+                                        </AlertDescription>
+                                    </Alert>
+                                ) : (
+                                    <div>
+                                        <Label htmlFor="template-select">Selecione um Modelo</Label>
+                                        <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                                            <SelectTrigger id="template-select" className="mt-2">
+                                                <SelectValue placeholder="Escolha um modelo..."/>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {templates.map((template) => (
+                                                    <SelectItem key={template.id} value={template.id.toString()}>
+                                                        {template.name} ({template.fields.length} campos)
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
 
@@ -327,11 +348,11 @@ Obrigado pela preferência!`)
                         {status === "idle" ? (
                             <label
                                 className={cn(
-                                    "flex min-h-[400px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors",
+                                    "flex min-h-100 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors",
                                     isDragging
                                         ? "border-primary bg-primary/5"
                                         : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
-                                    extractionMode === "template" && !selectedTemplate && "opacity-50 pointer-events-none",
+                                    disableImageSelect() && "opacity-50 pointer-events-none",
                                 )}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
@@ -342,7 +363,7 @@ Obrigado pela preferência!`)
                                     accept="image/*"
                                     className="hidden"
                                     onChange={handleFileSelect}
-                                    disabled={extractionMode === "template" && !selectedTemplate}
+                                    disabled={disableImageSelect()}
                                 />
                                 <div className="flex flex-col items-center gap-4 text-center">
                                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
@@ -368,7 +389,7 @@ Obrigado pela preferência!`)
                             </label>
                         ) : (
                             <div className="space-y-4">
-                                <div className="relative min-h-[400px] overflow-hidden rounded-lg bg-muted">
+                                <div className="relative min-h-100 overflow-hidden rounded-lg bg-muted">
                                     {uploadedFile?.preview && (
                                         <img
                                             src={uploadedFile.preview || "/placeholder.svg"}
@@ -452,7 +473,7 @@ Obrigado pela preferência!`)
                     <CardContent>
                         {status === "idle" ? (
                             <div
-                                className="flex min-h-[400px] items-center justify-center rounded-lg border border-dashed border-muted-foreground/25">
+                                className="flex min-h-100 items-center justify-center rounded-lg border border-dashed border-muted-foreground/25">
                                 <div className="text-center">
                                     <FileText className="mx-auto h-12 w-12 text-muted-foreground/50"/>
                                     <p className="mt-3 text-sm text-muted-foreground">
@@ -465,7 +486,7 @@ Obrigado pela preferência!`)
                         ) : status === "complete" ? (
                             <>
                                 {extractionMode === "template" ? (
-                                    <div className="space-y-3 min-h-[400px]">
+                                    <div className="space-y-3 min-h-100">
                                         {Object.entries(extractedData).map(([key, value]) => (
                                             <div key={key} className="rounded-lg border bg-muted/30 p-4">
                                                 <Label className="text-xs text-muted-foreground">{key}</Label>
@@ -477,13 +498,13 @@ Obrigado pela preferência!`)
                                     <Textarea
                                         value={extractedText}
                                         onChange={(e) => setExtractedText(e.target.value)}
-                                        className="min-h-[400px] resize-none font-mono text-sm"
+                                        className="min-h-100 resize-none font-mono text-sm"
                                         placeholder="Texto extraído..."
                                     />
                                 )}
                             </>
                         ) : (
-                            <div className="flex min-h-[400px] items-center justify-center rounded-lg bg-muted">
+                            <div className="flex min-h-100 items-center justify-center rounded-lg bg-muted">
                                 <div className="flex flex-col items-center gap-3">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary"/>
                                     <p className="text-sm text-muted-foreground">A aguardar processamento...</p>
