@@ -70,7 +70,7 @@ export function ScanContent() {
         if (extractionMode === "template")
             return !selectedLanguage && !selectedTemplate;
         return !selectedLanguage;
-    }, []);
+    }, [extractionMode, selectedLanguage, selectedTemplate]);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault()
