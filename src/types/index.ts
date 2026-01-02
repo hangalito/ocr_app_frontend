@@ -16,6 +16,11 @@ export type ExtractResult = {
     warnings?: string[];
 };
 
+export type ModelExtractResult = {
+    field: string;
+    text: string;
+}
+
 export type FileRecord = ExtractResult & {
     id: string; // local UUID
     createdAt: string; // ISO date

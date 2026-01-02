@@ -1,7 +1,7 @@
 /* _.. ___ .._ _ ... ._...___ .__.__ */
 
 import axios from "axios";
-import {ExtractResult, FileRecord, Template, UserProfile} from "@/types";
+import {ExtractResult, FileRecord, ModelExtractResult, Template, UserProfile} from "@/types";
 
 const DEFAULT_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
@@ -88,7 +88,7 @@ async function extractTextFromInvoice(
     file: File,
     template: string,
     lang: string = "por",
-): Promise<ExtractResult> {
+): Promise<ModelExtractResult[]> {
     const url = `${getBaseUrl()}/scan`;
     const formData = new FormData();
 

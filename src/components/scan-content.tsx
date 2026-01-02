@@ -20,7 +20,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {extractTextFromDocument, extractTextFromInvoice, getTemplates} from "@/lib/api"
-import {ExtractResult, OCRPage, Template} from "@/types";
+import {ExtractResult, ModelExtractResult, OCRPage, Template} from "@/types";
 
 type ScanStatus = "idle" | "uploading" | "processing" | "complete" | "error"
 
@@ -97,14 +97,13 @@ export function ScanContent() {
                 setStatus("processing")
 
                 try {
-                    // fixme: display each field result independently
                     if (extractionMode === "template" && selectedTemplate) {
                         const template = templates.find((t) => t.id.toString() === selectedTemplate)
                         if (template) {
-                            const result: ExtractResult = await extractTextFromInvoice(file, template.id)
+                            const result: ModelExtractResult[] = await extractTextFromInvoice(file, template.id)
                             const data: Record<string, string> = {}
-                            result.pages.forEach(page => {
-                                data[page.page_number] = page.text;
+                            result.forEach(field => {
+                                data[field.field] = field.text
                             })
                             setExtractedData(data)
                             setStatus("complete")
