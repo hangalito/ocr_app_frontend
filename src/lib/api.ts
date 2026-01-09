@@ -1,13 +1,44 @@
 /* _.. ___ .._ _ ... ._...___ .__.__ */
 
 import axios from "axios";
-import {ExtractResult, FileRecord, ModelExtractResult, Template, UserProfile} from "@/types";
+import { ExtractResult, FileRecord, ModelExtractResult, Template, UserProfile } from "@/types";
 
 const DEFAULT_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 function getBaseUrl() {
     return DEFAULT_BASE.replace(/\/$/, "");
 }
+
+// Global Axios Configuration
+axios.defaults.withCredentials = true;
+
+axios.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            // Avoid infinite loops for auth endpoints
+            if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh')) {
+                return Promise.reject(error);
+            }
+
+            originalRequest._retry = true;
+            try {
+                // Attempt refresh
+                await axios.post(`${getBaseUrl()}/auth/refresh`);
+                // Retry original request
+                return axios(originalRequest);
+            } catch (refreshError) {
+                // If refresh fails, redirect to login
+                if (typeof window !== "undefined") {
+                    window.location.href = "/login";
+                }
+                return Promise.reject(refreshError);
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 /**
  * Upload file to backend
@@ -21,7 +52,7 @@ async function uploadFile(file: File, languages = "por"): Promise<FileRecord> {
     fd.append("file", file);
     fd.append("langs", languages);
 
-    const {data} = await axios.post(url, fd);
+    const { data } = await axios.post(url, fd);
 
     return {
         ...data,
@@ -67,7 +98,7 @@ async function saveToHistory(records: FileRecord[]) {
 
 async function getProfile(): Promise<UserProfile> {
     // No backend stub; return placeholder profile
-    return {id: "local-1", name: "Acme Corp", email: "hello@acme.test"};
+    return { id: "local-1", name: "Acme Corp", email: "hello@acme.test" };
 }
 
 async function extractTextFromDocument(
@@ -80,7 +111,7 @@ async function extractTextFromDocument(
     formData.append("file", file);
     formData.append("lang", lang);
 
-    const {data} = await axios.post(url, formData);
+    const { data } = await axios.post(url, formData);
     return data;
 }
 
@@ -96,27 +127,38 @@ async function extractTextFromInvoice(
     formData.append("lang", lang);
     formData.append("template", template)
 
-    const {data} = await axios.post(url, formData);
+    const { data } = await axios.post(url, formData);
     return data;
 }
 
 async function createTemplate(template: Template): Promise<Template> {
-    const {data} = await axios.post(`${getBaseUrl()}/templates`, template);
+    const { data } = await axios.post(`${getBaseUrl()}/templates`, template);
     return data;
 }
 
 async function getTemplates(): Promise<Template[]> {
-    const {data} = await axios.get(`${getBaseUrl()}/templates`);
+    const { data } = await axios.get(`${getBaseUrl()}/templates`);
     return data;
 }
 
 async function updateTemplate(id: string, template: Partial<Template>): Promise<Template> {
-    const {data} = await axios.put(`${getBaseUrl()}/templates/${id}`, template);
+    const { data } = await axios.put(`${getBaseUrl()}/templates/${id}`, template);
     return data;
 }
 
 async function deleteTemplate(id: string): Promise<void> {
     await axios.delete(`${getBaseUrl()}/templates/${id}`);
+}
+
+async function login(formData: FormData): Promise<void> {
+    await axios.post(`${getBaseUrl()}/auth/login`, formData);
+}
+
+async function logout(): Promise<void> {
+    await axios.post(`${getBaseUrl()}/auth/logout`);
+    if (typeof window !== "undefined") {
+        window.location.href = "/login";
+    }
 }
 
 export {
@@ -131,5 +173,7 @@ export {
     createTemplate,
     getTemplates,
     updateTemplate,
-    deleteTemplate
+    deleteTemplate,
+    login,
+    logout
 };
