@@ -1,3 +1,5 @@
+/* _.. ___ .._ _ ... ._...___ .__.__ */
+
 import type React from "react"
 import type {Metadata} from "next"
 

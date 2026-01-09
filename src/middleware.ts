@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+/* _.. ___ .._ _ ... ._...___ .__.__ */
+
+import {NextResponse} from 'next/server'
+import type {NextRequest} from 'next/server'
 
 export function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl
+    const {pathname} = request.nextUrl
 
     // Public routes
     if (

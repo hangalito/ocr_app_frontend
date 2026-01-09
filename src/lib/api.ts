@@ -1,7 +1,7 @@
 /* _.. ___ .._ _ ... ._...___ .__.__ */
 
 import axios from "axios";
-import { ExtractResult, FileRecord, ModelExtractResult, Template, UserProfile } from "@/types";
+import {ExtractResult, FileRecord, ModelExtractResult, Template, UserProfile} from "@/types";
 
 const DEFAULT_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
@@ -52,7 +52,7 @@ async function uploadFile(file: File, languages = "por"): Promise<FileRecord> {
     fd.append("file", file);
     fd.append("langs", languages);
 
-    const { data } = await axios.post(url, fd);
+    const {data} = await axios.post(url, fd);
 
     return {
         ...data,
@@ -98,7 +98,7 @@ async function saveToHistory(records: FileRecord[]) {
 
 async function getProfile(): Promise<UserProfile> {
     // No backend stub; return placeholder profile
-    return { id: "local-1", name: "Acme Corp", email: "hello@acme.test" };
+    return {id: "local-1", name: "Acme Corp", email: "hello@acme.test"};
 }
 
 async function extractTextFromDocument(
@@ -111,7 +111,7 @@ async function extractTextFromDocument(
     formData.append("file", file);
     formData.append("lang", lang);
 
-    const { data } = await axios.post(url, formData);
+    const {data} = await axios.post(url, formData);
     return data;
 }
 
@@ -127,22 +127,22 @@ async function extractTextFromInvoice(
     formData.append("lang", lang);
     formData.append("template", template)
 
-    const { data } = await axios.post(url, formData);
+    const {data} = await axios.post(url, formData);
     return data;
 }
 
 async function createTemplate(template: Template): Promise<Template> {
-    const { data } = await axios.post(`${getBaseUrl()}/templates`, template);
+    const {data} = await axios.post(`${getBaseUrl()}/templates`, template);
     return data;
 }
 
 async function getTemplates(): Promise<Template[]> {
-    const { data } = await axios.get(`${getBaseUrl()}/templates`);
+    const {data} = await axios.get(`${getBaseUrl()}/templates`);
     return data;
 }
 
 async function updateTemplate(id: string, template: Partial<Template>): Promise<Template> {
-    const { data } = await axios.put(`${getBaseUrl()}/templates/${id}`, template);
+    const {data} = await axios.put(`${getBaseUrl()}/templates/${id}`, template);
     return data;
 }
 
